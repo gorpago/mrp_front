@@ -1,7 +1,14 @@
 import axios from 'axios'
 
-// API 기본 설정
-const API_BASE_URL = 'http://localhost:8084/api'
+// API 기본 설정 - 환경변수에서 자동으로 가져옴
+// 모바일 핫스팟 테스트용 임시 하드코딩 (테스트 후 원복 필요!)
+const API_BASE_URL = 'http://192.168.137.1:8084/api'
+// const API_BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8084/api'
+
+// 현재 사용 중인 API 주소 로그 출력
+console.log('🌐 현재 환경:', process.env.NODE_ENV)
+console.log('🔗 API 서버 주소:', API_BASE_URL)
+console.log('📝 환경변수 값:', process.env.VUE_APP_API_BASE_URL)
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -91,7 +98,7 @@ export const metronomeAPI = {
   startSyncedMetronome: (sessionId, hostUserId, delaySeconds = 5) => 
     api.post(`/metronome/session/${sessionId}/sync-start?hostUserId=${hostUserId}&delaySeconds=${delaySeconds}`),
   
-  // 서버 시간 조회
+  // 서버 시간 조회 (동기화용)
   getServerTime: () => api.get('/metronome/server-time'),
   
   // 테스트 세션 생성

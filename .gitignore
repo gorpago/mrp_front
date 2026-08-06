@@ -4,7 +4,7 @@ node_modules
 
 
 # local env files
-.env.local
+# .env.local (개발용으로 임시 허용)
 .env.*.local
 
 # Log files

@@ -1,12 +1,31 @@
 <template>
   <div class="login-page">
+    <!-- 배경 음표들 -->
+    <div class="music-notes">
+      <div class="note note-1">♪</div>
+      <div class="note note-2">♫</div>
+      <div class="note note-3">♪</div>
+      <div class="note note-4">♬</div>
+      <div class="note note-5">♩</div>
+      <div class="note note-6">♪</div>
+    </div>
+
     <div class="login-container">
       <div class="login-header">
-        <el-icon class="logo-icon" size="48">
-          <Headset />
-        </el-icon>
-        <h1>Music Rhythm Platform</h1>
-        <p>소셜 로그인으로 간편하게 시작하세요</p>
+        <div class="logo-section">
+          <div class="guitar-icon">
+            <svg viewBox="0 0 100 100" width="60" height="60">
+              <path d="M20 30 Q30 20 40 30 L70 60 Q80 70 70 80 Q60 70 50 60 L20 30 Z" 
+                    fill="#fff" stroke="#fff" stroke-width="2"/>
+              <circle cx="35" cy="45" r="3" fill="#333"/>
+              <line x1="25" y1="35" x2="65" y2="75" stroke="#333" stroke-width="1"/>
+              <line x1="30" y1="30" x2="70" y2="70" stroke="#333" stroke-width="1"/>
+              <line x1="35" y1="25" x2="75" y2="65" stroke="#333" stroke-width="1"/>
+            </svg>
+          </div>
+          <h1>무작위취향</h1>
+          <p>직장인밴드 무작위취향 입니다</p>
+        </div>
       </div>
 
       <div class="login-form">
@@ -18,34 +37,21 @@
             :loading="loading.google"
           >
             <div class="btn-content">
-              <div class="social-icon google-icon">G</div>
+              <div class="social-icon google-icon">
+                <svg width="18" height="18" viewBox="0 0 18 18">
+                  <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
+                  <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2.04a4.8 4.8 0 0 1-2.7.75 4.8 4.8 0 0 1-4.52-3.36H1.83v2.07A8 8 0 0 0 8.98 17z"/>
+                  <path fill="#FBBC05" d="M4.46 10.41a4.8 4.8 0 0 1-.25-1.41c0-.49.09-.97.25-1.41V5.52H1.83a8 8 0 0 0 0 7.01l2.63-2.12z"/>
+                  <path fill="#EA4335" d="M8.98 3.58c1.32 0 2.5.45 3.44 1.35l2.54-2.54A8 8 0 0 0 8.98 1a8 8 0 0 0-7.15 4.48l2.63 2.09c.61-1.85 2.35-3.36 4.52-3.36z"/>
+                </svg>
+              </div>
               Google로 로그인
             </div>
           </el-button>
 
-          <el-button 
-            class="naver-btn"
-            size="large"
-            @click="loginWithNaver"
-            :loading="loading.naver"
-          >
-            <div class="btn-content">
-              <div class="social-icon naver-icon">N</div>
-              네이버로 로그인
-            </div>
-          </el-button>
-
-          <el-button 
-            class="kakao-btn"
-            size="large"
-            @click="loginWithKakao"
-            :loading="loading.kakao"
-          >
-            <div class="btn-content">
-              <div class="social-icon kakao-icon">K</div>
-              카카오로 로그인
-            </div>
-          </el-button>
+          <!-- 네이버, 카카오 버튼 숨김 -->
+          <!-- <el-button class="naver-btn" style="display: none;">네이버</el-button> -->
+          <!-- <el-button class="kakao-btn" style="display: none;">카카오</el-button> -->
         </div>
 
         <div class="divider">
@@ -55,8 +61,6 @@
         <el-button 
           class="guest-btn"
           size="large"
-          type="info"
-          plain
           @click="continueAsGuest"
         >
           <el-icon><User /></el-icon>
@@ -78,7 +82,7 @@
 
 <script>
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Headset, User } from '@element-plus/icons-vue'
+import { User } from '@element-plus/icons-vue'
 import { authAPI } from '@/services/api'
 import { authStore } from '@/store/auth'
 import { GoogleAuthService } from '@/services/googleAuth'
@@ -88,7 +92,6 @@ import { KakaoAuthService } from '@/services/kakaoAuth'
 export default {
   name: 'LoginPage',
   components: {
-    Headset,
     User
   },
   data() {
@@ -128,32 +131,21 @@ export default {
       this.loading.google = true
       try {
         if (this.useRealSocialLogin) {
-          // 실제 Google 로그인 - 콜백 방식
-          await this.googleAuth.signIn((userInfo, error) => {
-            if (error) {
-              console.error('Google 로그인 실패:', error)
-              ElMessage.error('Google 로그인에 실패했습니다.')
-              this.loading.google = false
-              return
-            }
-            
-            if (userInfo) {
-              // Google 로그인 성공 시 처리 - OAuth 2.0 방식
-              const loginData = {
-                provider: 'google',
-                providerId: userInfo.id,
-                email: userInfo.email,
-                name: userInfo.name,
-                profileImage: userInfo.picture,
-                accessToken: userInfo.accessToken, // 실제 OAuth 2.0 access token
-                authType: 'oauth2'
-              }
-              
-              this.processSocialLogin(loginData).finally(() => {
-                this.loading.google = false
-              })
-            }
-          })
+          // 실제 Google 로그인 - 새로운 Google Identity Services 방식
+          const result = await this.googleAuth.signIn()
+          
+          // Google 로그인 성공 시 처리
+          const loginData = {
+            provider: 'google',
+            providerId: result.userInfo.id,
+            email: result.userInfo.email,
+            name: result.userInfo.name,
+            profileImage: result.userInfo.picture,
+            accessToken: result.accessToken,
+            authType: 'oauth2'
+          }
+          
+          await this.processSocialLogin(loginData)
         } else {
           // 테스트용 더미 데이터
           ElMessage.info('테스트 모드: Google 로그인')
@@ -164,97 +156,25 @@ export default {
           }
           
           await this.processSocialLogin(loginData)
-          this.loading.google = false
         }
         
       } catch (error) {
         console.error('Google 로그인 실패:', error)
         ElMessage.error('Google 로그인에 실패했습니다.')
+      } finally {
         this.loading.google = false
       }
     },
 
+    // 네이버, 카카오 로그인 메서드는 숨김 처리
     async loginWithNaver() {
-      this.loading.naver = true
-      try {
-        if (this.useRealSocialLogin) {
-          // 실제 네이버 로그인 - 콜백 방식
-          await this.naverAuth.signIn((userInfo, error) => {
-            if (error) {
-              console.error('네이버 로그인 실패:', error)
-              ElMessage.error('네이버 로그인에 실패했습니다.')
-              this.loading.naver = false
-              return
-            }
-            
-            if (userInfo) {
-              // 네이버 로그인 성공 시 처리
-              const loginData = {
-                provider: 'naver',
-                providerId: userInfo.id,
-                email: userInfo.email,
-                name: userInfo.name,
-                profileImage: userInfo.picture,
-                accessToken: userInfo.accessToken,
-                authType: 'oauth2'
-              }
-              
-              this.processSocialLogin(loginData).finally(() => {
-                this.loading.naver = false
-              })
-            }
-          })
-        } else {
-          // 테스트용 더미 데이터
-          ElMessage.info('테스트 모드: 네이버 로그인')
-          const loginData = {
-            provider: 'naver',
-            providerId: 'test-naver-id',
-            email: 'test@naver.com',
-            name: '네이버 테스트 사용자',
-            accessToken: 'mock-naver-token'
-          }
-          
-          await this.processSocialLogin(loginData)
-          this.loading.naver = false
-        }
-        
-      } catch (error) {
-        console.error('네이버 로그인 실패:', error)
-        ElMessage.error('네이버 로그인에 실패했습니다.')
-        this.loading.naver = false
-      }
+      // 숨김 처리된 기능
+      console.log('네이버 로그인은 현재 비활성화되었습니다.')
     },
 
     async loginWithKakao() {
-      this.loading.kakao = true
-      try {
-        let loginData
-        
-        if (this.useRealSocialLogin) {
-          // 실제 카카오 로그인
-          const kakaoResult = await this.kakaoAuth.signIn()
-          loginData = {
-            provider: 'kakao',
-            accessToken: kakaoResult.accessToken
-          }
-        } else {
-          // 테스트용 더미 데이터
-          ElMessage.info('테스트 모드: 카카오 로그인')
-          loginData = {
-            provider: 'kakao',
-            accessToken: 'mock-kakao-token'
-          }
-        }
-        
-        await this.processSocialLogin(loginData)
-        
-      } catch (error) {
-        console.error('카카오 로그인 실패:', error)
-        ElMessage.error('카카오 로그인에 실패했습니다.')
-      } finally {
-        this.loading.kakao = false
-      }
+      // 숨김 처리된 기능
+      console.log('카카오 로그인은 현재 비활성화되었습니다.')
     },
 
     async processSocialLogin(loginData) {
@@ -303,7 +223,9 @@ export default {
           
           // 전역 상태에 사용자 정보 저장
           authStore.login(user)
-          console.log('authStore에 사용자 저장 완료:', authStore.currentUser)
+          
+          // Java 서버에 로그인 성공 콜백 전송
+          await this.sendLoginCallback(user, loginData.provider)
           
           // 성공 메시지
           if (isNewUser) {
@@ -313,14 +235,11 @@ export default {
           }
           
           // 메인 페이지로 이동
-          console.log('메인 페이지로 이동 시도')
           await this.$router.push('/')
-          console.log('메인 페이지 이동 완료')
           
         } else {
           ElMessage.error(response.data.message || '로그인에 실패했습니다.')
         }
-        
       } catch (error) {
         console.error('소셜 로그인 API 호출 실패:', error)
         console.error('백엔드 응답 데이터:', error.response?.data)
@@ -392,6 +311,42 @@ export default {
       }).catch(() => {
         // 취소됨
       })
+    },
+
+    // Java 서버에 로그인 성공 콜백 전송
+    async sendLoginCallback(user, provider) {
+      try {
+        console.log('Java 서버에 로그인 콜백 전송:', { user, provider })
+        
+        const callbackData = {
+          userId: user.id,
+          userName: user.name,
+          userEmail: user.email,
+          provider: provider,
+          loginTime: new Date().toISOString(),
+          environment: process.env.NODE_ENV
+        }
+        
+        // 환경별 콜백 URL 설정
+        const callbackUrl = process.env.VUE_APP_API_BASE_URL + '/auth/login-callback'
+        
+        const response = await fetch(callbackUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(callbackData)
+        })
+        
+        if (response.ok) {
+          console.log('Java 서버 로그인 콜백 성공')
+        } else {
+          console.warn('Java 서버 로그인 콜백 실패:', response.status)
+        }
+      } catch (error) {
+        console.warn('Java 서버 로그인 콜백 오류:', error)
+        // 콜백 실패해도 로그인은 계속 진행
+      }
     }
   }
 }
@@ -400,43 +355,129 @@ export default {
 <style scoped>
 .login-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 배경 음표 애니메이션 */
+.music-notes {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.note {
+  position: absolute;
+  color: rgba(255, 255, 255, 0.1);
+  font-size: 2rem;
+  animation: float 6s ease-in-out infinite;
+}
+
+.note-1 {
+  top: 10%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.note-2 {
+  top: 20%;
+  right: 15%;
+  animation-delay: 1s;
+}
+
+.note-3 {
+  bottom: 30%;
+  left: 20%;
+  animation-delay: 2s;
+}
+
+.note-4 {
+  bottom: 20%;
+  right: 10%;
+  animation-delay: 3s;
+}
+
+.note-5 {
+  top: 50%;
+  left: 5%;
+  animation-delay: 4s;
+}
+
+.note-6 {
+  top: 70%;
+  right: 25%;
+  animation-delay: 5s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+    opacity: 0.1;
+  }
+  50% {
+    transform: translateY(-20px) rotate(10deg);
+    opacity: 0.3;
+  }
 }
 
 .login-container {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  padding: 40px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+  padding: 50px 40px;
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   text-align: center;
+  position: relative;
+  z-index: 2;
 }
 
 .login-header {
   margin-bottom: 40px;
 }
 
-.logo-icon {
-  color: #667eea;
-  margin-bottom: 16px;
+.logo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.guitar-icon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  margin-bottom: 8px;
 }
 
 .login-header h1 {
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 32px;
+  font-weight: 800;
   color: #2c3e50;
-  margin: 0 0 8px 0;
+  margin: 0;
+  letter-spacing: -1px;
 }
 
 .login-header p {
   color: #7f8c8d;
   font-size: 16px;
   margin: 0;
+  font-weight: 400;
 }
 
 .login-form {
@@ -446,15 +487,16 @@ export default {
 .social-buttons {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: 16px;
+  margin-bottom: 30px;
 }
 
 .social-buttons .el-button {
-  height: 48px;
-  border-radius: 8px;
-  font-weight: 500;
+  height: 56px;
+  border-radius: 12px;
+  font-weight: 600;
   font-size: 16px;
+  transition: all 0.3s ease;
 }
 
 .btn-content {
@@ -465,68 +507,30 @@ export default {
 }
 
 .social-icon {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: 12px;
-}
-
-.google-icon {
-  background: #4285f4;
-  color: white;
-}
-
-.naver-icon {
-  background: white;
-  color: #03c75a;
-  border: 1px solid #03c75a;
-}
-
-.kakao-icon {
-  background: #3c1e1e;
-  color: #fee500;
 }
 
 .google-btn {
   background: #fff;
-  border: 1px solid #dadce0;
-  color: #3c4043;
+  border: 2px solid #e0e0e0;
+  color: #5f6368;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .google-btn:hover {
   background: #f8f9fa;
   border-color: #dadce0;
-}
-
-.naver-btn {
-  background: #03c75a;
-  border: 1px solid #03c75a;
-  color: white;
-}
-
-.naver-btn:hover {
-  background: #02b351;
-  border-color: #02b351;
-}
-
-.kakao-btn {
-  background: #fee500;
-  border: 1px solid #fee500;
-  color: #000;
-}
-
-.kakao-btn:hover {
-  background: #fdd835;
-  border-color: #fdd835;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .divider {
   position: relative;
-  margin: 24px 0;
+  margin: 30px 0;
   text-align: center;
 }
 
@@ -537,37 +541,51 @@ export default {
   left: 0;
   right: 0;
   height: 1px;
-  background: #e0e0e0;
+  background: linear-gradient(to right, transparent, #e0e0e0, transparent);
 }
 
 .divider span {
-  background: white;
-  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 0 20px;
   color: #7f8c8d;
   font-size: 14px;
+  font-weight: 500;
 }
 
 .guest-btn {
   width: 100%;
-  height: 48px;
-  border-radius: 8px;
-  font-weight: 500;
+  height: 56px;
+  border-radius: 12px;
+  font-weight: 600;
   font-size: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.guest-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
 }
 
 .login-footer {
   font-size: 12px;
-  color: #7f8c8d;
-  line-height: 1.4;
+  color: #95a5a6;
+  line-height: 1.5;
+  margin-top: 20px;
 }
 
 .login-footer a {
   color: #667eea;
   text-decoration: none;
+  font-weight: 500;
 }
 
 .login-footer a:hover {
   text-decoration: underline;
+  color: #5a6fd8;
 }
 
 .loading-overlay {
@@ -576,7 +594,8 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(44, 62, 80, 0.8);
+  backdrop-filter: blur(5px);
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -585,7 +604,33 @@ export default {
 
 .loading-text {
   color: white;
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 18px;
+  font-weight: 600;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* 반응형 디자인 */
+@media (max-width: 480px) {
+  .login-container {
+    padding: 40px 30px;
+    margin: 20px;
+  }
+  
+  .login-header h1 {
+    font-size: 28px;
+  }
+  
+  .guitar-icon {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .social-buttons .el-button {
+    height: 52px;
+  }
+  
+  .guest-btn {
+    height: 52px;
+  }
 }
 </style>
