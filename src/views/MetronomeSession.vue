@@ -1159,7 +1159,7 @@ export default {
     
     // 브라우저 종료/새로고침 시 세션 나가기
     setupBeforeUnloadHandler() {
-      window.addEventListener('beforeunload', (event) => {
+      window.addEventListener('beforeunload', () => {
         // 메트로놈 정지
         this.stopMetronome()
         
