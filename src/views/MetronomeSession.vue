@@ -167,7 +167,9 @@
               <el-icon><User /></el-icon>
             </el-avatar>
             <div class="participant-info">
-              <div class="participant-name">참가자 {{ index + 1 }}</div>
+              <div class="participant-name">
+                {{ session?.participantNames?.[index] || `참가자 ${index + 1}` }}
+              </div>
               <div class="participant-role">멤버</div>
             </div>
           </div>
@@ -287,6 +289,7 @@ export default {
     this.startPolling()
     this.setupVisibilityHandler()
     this.startTimeSyncInterval()  // 주기적 시간 동기화
+    this.setupBeforeUnloadHandler()  // 브라우저 종료 시 세션 나가기
   },
   beforeUnmount() {
     this.stopMetronome()
@@ -345,6 +348,11 @@ export default {
         }
         
         console.log('세션 로드 완료:', this.session)
+        console.log('참가자 정보:', {
+          participantIds: this.session?.participantIds,
+          participantNames: this.session?.participantNames,
+          count: this.session?.participantIds?.length
+        })
         console.log('호스트 권한 확인:', {
           sessionHostUserId: this.session?.hostUserId,
           currentUserId: this.currentUserId,
@@ -448,7 +456,7 @@ export default {
       }
     },
     
-    // 카운트다운 시작 (서버 시간 동기화 적용)
+    // 카운트다운 시작 (서버 시간 동기화 적용 - 개선)
     startCountdown(startTime) {
       this.syncStartTime = startTime
       
@@ -467,35 +475,42 @@ export default {
       console.log(`서버 시간 오프셋: ${this.serverTimeOffset}ms`)
       console.log(`실제 남은 밀리초: ${startTime - now}ms`)
       
+      // 정확한 시작 시간에 메트로놈 시작하도록 예약
+      const exactDelay = startTime - now
+      
+      if (exactDelay > 0) {
+        console.log(`⏰ ${exactDelay}ms 후 정확히 시작 예약`)
+        
+        // 정확한 시간에 시작
+        setTimeout(() => {
+          console.log('✅ 예약된 시간에 메트로놈 시작!')
+          this.syncCountdown = 0
+          this.stopMetronome()
+          this.isPlaying = true
+          this.startSyncedMetronomeLoop()
+        }, exactDelay)
+      }
+      
+      // 카운트다운 UI 업데이트 (25ms마다 체크)
       this.syncInterval = setInterval(() => {
-        const now = this.getSyncedTime()  // 동기화된 시간 사용
+        const now = this.getSyncedTime()
         const remainingMs = startTime - now
         const remaining = Math.floor(remainingMs / 1000) + 1
         
-        console.log(`카운트다운 체크: 남은ms=${remainingMs}, 남은초=${remaining}`)
-        
         if (remainingMs > 1000) {
           this.syncCountdown = remaining
-          console.log(`카운트다운: ${remaining}초`)
         } else if (remainingMs > 0) {
           this.syncCountdown = 1
-          console.log(`카운트다운: 1초 (곧 시작)`)
         } else {
-          // 시작 시간 도달
+          // UI 업데이트만 중지 (실제 시작은 setTimeout에서 처리)
           this.syncCountdown = 0
           clearInterval(this.syncInterval)
           this.syncInterval = null
-          
-          console.log('✅ 동기화된 메트로놈 시작!')
-          this.stopMetronome()
-          this.isPlaying = true
-          console.log('isPlaying 상태 설정:', this.isPlaying)
-          this.startSyncedMetronomeLoop()
         }
-      }, 100) // 100ms마다 체크
+      }, 25) // 25ms마다 체크 (UI 업데이트만)
     },
     
-    // 동기화된 메트로놈 루프 시작 (서버 시간 동기화 적용)
+    // 동기화된 메트로놈 루프 시작 (서버 시간 동기화 적용 - 개선)
     startSyncedMetronomeLoop() {
       if (this.metronomeInterval) {
         clearInterval(this.metronomeInterval)
@@ -526,11 +541,15 @@ export default {
       console.log(`- 지연 시간: ${syncDelay}ms`)
       console.log(`- 서버 시간 오프셋: ${this.serverTimeOffset}ms`)
       
-      // Web Audio API를 사용한 정밀한 동기화
+      // Web Audio API를 사용한 정밀한 동기화 (항상 사용)
       if (this.audioContext && this.audioContext.state === 'running') {
+        // AudioContext의 currentTime 기준으로 정확한 시작 시간 계산
         const audioStartTime = this.audioContext.currentTime + (syncDelay / 1000)
         console.log(`Web Audio API 동기화 시작: ${audioStartTime}`)
-        this.startPreciseMetronome(audioStartTime, beatInterval)
+        console.log(`AudioContext.currentTime: ${this.audioContext.currentTime}`)
+        
+        // 절대 시간 기준 메트로놈 시작
+        this.startPreciseMetronomeWithAbsoluteTime(audioStartTime, beatInterval)
       } else {
         if (syncDelay > 0) {
           console.log(`${syncDelay}ms 후 정확히 시작`)
@@ -545,12 +564,34 @@ export default {
       }
     },
     
-    // Web Audio API를 사용한 정밀한 메트로놈
-    startPreciseMetronome(startTime, interval) {
-      console.log(`정밀 메트로놈 시작: ${startTime}, 간격: ${interval}초`)
+    // 절대 시간 기준 정밀 메트로놈 (동기화 개선)
+    startPreciseMetronomeWithAbsoluteTime(startTime, interval) {
+      console.log(`🎵 절대 시간 기준 메트로놈 시작`)
+      console.log(`- 시작 시간: ${startTime}`)
+      console.log(`- 비트 간격: ${interval}초 (${this.currentBpm} BPM)`)
+      console.log(`- 현재 AudioContext 시간: ${this.audioContext.currentTime}`)
       
+      // 첫 번째 비트를 정확한 시작 시간에 스케줄링
       let nextBeatTime = startTime
       let beatNumber = 0
+      
+      // 첫 비트 즉시 스케줄링 (정확한 시작 시간에)
+      console.log(`🎯 첫 번째 비트 스케줄링: ${startTime}`)
+      this.scheduleNote(startTime, true) // 첫 비트는 항상 강조
+      
+      // 비주얼도 정확한 시간에
+      const firstBeatDelay = (startTime - this.audioContext.currentTime) * 1000
+      if (firstBeatDelay >= 0) {
+        setTimeout(() => {
+          if (this.isPlaying) {
+            this.beatCount = 0
+            this.updateVisualBeat()
+          }
+        }, firstBeatDelay)
+      }
+      
+      nextBeatTime += interval
+      beatNumber = 1
       
       const scheduleAheadTime = 0.1 // 100ms 앞서 스케줄링
       const lookahead = 25.0 // 25ms마다 체크
@@ -562,12 +603,16 @@ export default {
             const isAccent = beatNumber % this.currentTimeSignature === 0
             this.scheduleNote(nextBeatTime, isAccent)
             
-            // 비주얼 업데이트 (약간의 지연으로 정확한 타이밍에)
+            // 비주얼 업데이트 (정확한 타이밍에)
             const visualDelay = (nextBeatTime - this.audioContext.currentTime) * 1000
+            const currentBeatNumber = beatNumber
+            
             if (visualDelay >= 0) {
               setTimeout(() => {
-                this.beatCount = beatNumber % this.currentTimeSignature
-                this.updateVisualBeat()
+                if (this.isPlaying) {
+                  this.beatCount = currentBeatNumber % this.currentTimeSignature
+                  this.updateVisualBeat()
+                }
               }, visualDelay)
             }
             
@@ -584,6 +629,11 @@ export default {
       }
       
       scheduler()
+    },
+    
+    // Web Audio API를 사용한 정밀한 메트로놈 (레거시 - 호환성)
+    startPreciseMetronome(startTime, interval) {
+      this.startPreciseMetronomeWithAbsoluteTime(startTime, interval)
     },
     
     // Web Audio API로 정확한 비트 스케줄링
@@ -1105,9 +1155,21 @@ export default {
         }
       })
       
-      // 페이지 언로드 시 정리
-      window.addEventListener('beforeunload', () => {
+    },
+    
+    // 브라우저 종료/새로고침 시 세션 나가기
+    setupBeforeUnloadHandler() {
+      window.addEventListener('beforeunload', (event) => {
+        // 메트로놈 정지
         this.stopMetronome()
+        
+        // 세션 나가기 (동기 방식으로 즉시 전송)
+        if (this.session && this.currentUserId) {
+          // navigator.sendBeacon 사용 (비동기지만 브라우저 종료 시에도 전송 보장)
+          const leaveUrl = `${process.env.VUE_APP_API_BASE_URL}/api/metronome/session/${this.sessionId}/leave?userId=${this.currentUserId}`
+          navigator.sendBeacon(leaveUrl)
+          console.log('브라우저 종료 - 세션 나가기 요청 전송')
+        }
       })
     },
     
@@ -1208,51 +1270,65 @@ export default {
       }
     },
     
-    // 서버 시간 동기화 (NTP 방식)
+    // 서버 시간 동기화 (NTP 방식 - 개선)
     async syncServerTime() {
       try {
         const measurements = []
         
-        // 3번 측정하여 평균값 사용
-        for (let i = 0; i < 3; i++) {
-          const clientSendTime = Date.now()
-          
+        // 5번 측정하여 중앙값 사용 (더 정확한 동기화)
+        for (let i = 0; i < 5; i++) {
+          const clientSendTime = performance.now() + performance.timeOrigin
           const response = await metronomeAPI.getServerTime()
           const serverTime = response.data.serverTime
+          const clientReceiveTime = performance.now() + performance.timeOrigin
           
-          const clientReceiveTime = Date.now()
           const roundTripTime = clientReceiveTime - clientSendTime
-          
-          // 서버 시간 오프셋 계산 (왕복 시간의 절반을 보정)
           const offset = serverTime - (clientSendTime + roundTripTime / 2)
           
           measurements.push({
+            roundTripTime,
             offset,
-            roundTripTime
+            timestamp: clientSendTime
           })
           
           console.log(`시간 동기화 측정 ${i + 1}:`, {
-            roundTripTime: roundTripTime + 'ms',
-            offset: offset + 'ms'
+            roundTripTime: `${roundTripTime.toFixed(2)}ms`,
+            offset: `${offset > 0 ? '+' : ''}${offset.toFixed(2)}ms`
           })
           
-          // 다음 측정 전 짧은 대기
-          if (i < 2) {
-            await new Promise(resolve => setTimeout(resolve, 100))
-          }
+          // 측정 간 짧은 대기 (네트워크 부하 분산)
+          if (i < 4) await new Promise(resolve => setTimeout(resolve, 50))
         }
         
-        // 가장 빠른 응답 시간의 오프셋 사용 (네트워크 지연이 가장 적은 것)
+        // 왕복 시간 기준 정렬 후 중앙값 3개 평균 사용 (이상치 제거)
         measurements.sort((a, b) => a.roundTripTime - b.roundTripTime)
-        this.serverTimeOffset = measurements[0].offset
+        const middleThree = measurements.slice(1, 4)
+        const avgOffset = middleThree.reduce((sum, m) => sum + m.offset, 0) / middleThree.length
+        const avgRoundTrip = middleThree.reduce((sum, m) => sum + m.roundTripTime, 0) / middleThree.length
+        
+        this.serverTimeOffset = Math.round(avgOffset)
         this.lastSyncTime = Date.now()
         
+        // 동기화 품질 평가
+        const quality = avgRoundTrip < 20 ? 'excellent' : avgRoundTrip < 50 ? 'good' : avgRoundTrip < 100 ? 'fair' : 'poor'
+        const qualityText = {
+          excellent: '우수',
+          good: '양호',
+          fair: '보통',
+          poor: '불량'
+        }[quality]
+        
         console.log('✅ 서버 시간 동기화 완료:', {
-          offset: this.serverTimeOffset + 'ms',
-          bestRoundTrip: measurements[0].roundTripTime + 'ms'
+          offset: `${this.serverTimeOffset > 0 ? '+' : ''}${this.serverTimeOffset}ms`,
+          avgRoundTrip: `${avgRoundTrip.toFixed(2)}ms`,
+          quality: `${qualityText} (${quality})`,
+          measurements: measurements.length
         })
         
-        ElMessage.success(`서버 시간 동기화 완료 (오프셋: ${this.serverTimeOffset}ms)`)
+        // 동기화 품질이 불량하면 경고
+        if (quality === 'poor') {
+          console.warn('⚠️ 네트워크 지연이 큽니다. 동기화 정확도가 떨어질 수 있습니다.')
+        }
       } catch (error) {
         console.error('서버 시간 동기화 실패:', error)
         this.serverTimeOffset = 0

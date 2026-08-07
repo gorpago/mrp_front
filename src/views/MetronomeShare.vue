@@ -364,6 +364,12 @@ export default {
       
       this.joining = true
       try {
+        console.log('세션 참가 요청:', {
+          sessionCode: this.joinForm.sessionCode,
+          userId: this.joinForm.userId,
+          userName: this.joinForm.userName
+        })
+        
         const response = await metronomeAPI.joinSession(
           this.joinForm.sessionCode,
           this.joinForm.userId,

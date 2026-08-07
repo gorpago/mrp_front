@@ -3,6 +3,8 @@ const GOOGLE_CLIENT_ID = process.env.VUE_APP_GOOGLE_CLIENT_ID || '326812627200-d
 
 // 현재 Google OAuth 설정 로그 출력
 console.log('🔑 Google Client ID:', GOOGLE_CLIENT_ID)
+console.log('🌐 현재 도메인:', window.location.origin)
+console.log('📝 환경:', process.env.NODE_ENV)
 
 export class GoogleAuthService {
   constructor() {
@@ -68,6 +70,9 @@ export class GoogleAuthService {
           callback: (response) => {
             if (response.error) {
               console.error('Google 로그인 오류:', response.error)
+              console.error('오류 상세:', response)
+              console.error('현재 도메인:', window.location.origin)
+              console.error('Google Cloud Console에서 이 도메인을 승인된 JavaScript 원본에 추가해야 합니다.')
               reject(new Error(response.error))
               return
             }

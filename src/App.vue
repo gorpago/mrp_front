@@ -18,7 +18,8 @@
             >
               <el-menu-item index="/">홈</el-menu-item>
               <el-menu-item index="/metronome">메트로놈 공유</el-menu-item>
-              <el-menu-item index="/performance">연주영상</el-menu-item>
+              <!-- 추후 적용 예정 -->
+              <!-- <el-menu-item index="/performance">연주영상</el-menu-item> -->
             </el-menu>
             
             <div class="user-section">

@@ -34,6 +34,8 @@
           </el-card>
         </el-col>
 
+        <!-- 추후 적용 예정 -->
+        <!-- 
         <el-col :xs="24" :sm="12" :md="12">
           <el-card class="menu-card" shadow="hover" @click="goToPerformance">
             <div class="menu-content">
@@ -53,6 +55,7 @@
             </div>
           </el-card>
         </el-col>
+        -->
       </el-row>
     </div>
 
@@ -61,20 +64,22 @@
       <el-card class="stats-card">
         <h3>실시간 통계</h3>
         <el-row :gutter="20">
-          <el-col :span="8">
+          <el-col :span="12">
             <div class="stat-item">
               <el-icon class="stat-icon"><Connection /></el-icon>
               <div class="stat-number">{{ stats.activeSessions }}</div>
               <div class="stat-label">활성 세션</div>
             </div>
           </el-col>
-          <el-col :span="8">
+          <el-col :span="12">
             <div class="stat-item">
               <el-icon class="stat-icon"><User /></el-icon>
               <div class="stat-number">{{ stats.totalUsers }}</div>
               <div class="stat-label">총 사용자</div>
             </div>
           </el-col>
+          <!-- 추후 적용 예정 -->
+          <!-- 
           <el-col :span="8">
             <div class="stat-item">
               <el-icon class="stat-icon"><VideoPlay /></el-icon>
@@ -82,6 +87,7 @@
               <div class="stat-label">연주영상</div>
             </div>
           </el-col>
+          -->
         </el-row>
       </el-card>
     </div>
