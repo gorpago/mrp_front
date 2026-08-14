@@ -322,5 +322,47 @@ export default {
     font-size: 12px;
     padding: 4px 8px;
   }
+  
+  /* 모바일 터치 최적화 */
+  .el-button {
+    min-height: 44px;
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+  
+  .el-dialog {
+    width: 95% !important;
+    margin: 0 auto;
+  }
+  
+  .el-input__inner {
+    min-height: 44px;
+    font-size: 16px; /* iOS 자동 줌 방지 */
+  }
+  
+  .el-menu-item {
+    min-height: 44px;
+    line-height: 44px;
+  }
+}
+
+/* 모바일 가로 모드 */
+@media (max-width: 768px) and (orientation: landscape) {
+  .app-header {
+    height: 60px !important;
+  }
+  
+  .header-content {
+    flex-direction: row;
+    padding: 0 10px;
+  }
+  
+  .logo h2 {
+    font-size: 14px;
+  }
+  
+  .nav-menu {
+    width: auto;
+  }
 }
 </style>
