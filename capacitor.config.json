@@ -3,6 +3,7 @@
   "appName": "MRP Music Plan",
   "webDir": "dist",
   "server": {
+    "hostname": "localhost",
     "androidScheme": "https"
   },
   "plugins": {
