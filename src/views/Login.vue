@@ -13,58 +13,18 @@
     <div class="login-container">
       <div class="login-header">
         <div class="logo-section">
-          <div class="guitar-icon">
-            <svg viewBox="0 0 100 100" width="60" height="60">
-              <path d="M20 30 Q30 20 40 30 L70 60 Q80 70 70 80 Q60 70 50 60 L20 30 Z" 
-                    fill="#fff" stroke="#fff" stroke-width="2"/>
-              <circle cx="35" cy="45" r="3" fill="#333"/>
-              <line x1="25" y1="35" x2="65" y2="75" stroke="#333" stroke-width="1"/>
-              <line x1="30" y1="30" x2="70" y2="70" stroke="#333" stroke-width="1"/>
-              <line x1="35" y1="25" x2="75" y2="65" stroke="#333" stroke-width="1"/>
-            </svg>
-          </div>
           <h1>무작위취향</h1>
           <p>직장인밴드 무작위취향 입니다</p>
         </div>
       </div>
 
       <div class="login-form">
-        <div class="social-buttons">
-          <el-button 
-            class="google-btn"
-            size="large"
-            @click="loginWithGoogle"
-            :loading="loading.google"
-          >
-            <div class="btn-content">
-              <div class="social-icon google-icon">
-                <svg width="18" height="18" viewBox="0 0 18 18">
-                  <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
-                  <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2.04a4.8 4.8 0 0 1-2.7.75 4.8 4.8 0 0 1-4.52-3.36H1.83v2.07A8 8 0 0 0 8.98 17z"/>
-                  <path fill="#FBBC05" d="M4.46 10.41a4.8 4.8 0 0 1-.25-1.41c0-.49.09-.97.25-1.41V5.52H1.83a8 8 0 0 0 0 7.01l2.63-2.12z"/>
-                  <path fill="#EA4335" d="M8.98 3.58c1.32 0 2.5.45 3.44 1.35l2.54-2.54A8 8 0 0 0 8.98 1a8 8 0 0 0-7.15 4.48l2.63 2.09c.61-1.85 2.35-3.36 4.52-3.36z"/>
-                </svg>
-              </div>
-              Google로 로그인
-            </div>
-          </el-button>
-
-          <!-- 네이버, 카카오 버튼 숨김 -->
-          <!-- <el-button class="naver-btn" style="display: none;">네이버</el-button> -->
-          <!-- <el-button class="kakao-btn" style="display: none;">카카오</el-button> -->
-        </div>
-
-        <div class="divider">
-          <span>또는</span>
-        </div>
-
         <el-button 
           class="guest-btn"
           size="large"
           @click="continueAsGuest"
         >
-          <el-icon><User /></el-icon>
-          게스트로 계속하기
+          게스트로 시작하기
         </el-button>
       </div>
 
@@ -81,8 +41,7 @@
 </template>
 
 <script>
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { User } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import { authAPI } from '@/services/api'
 import { authStore } from '@/store/auth'
 import { GoogleAuthService } from '@/services/googleAuth'
@@ -91,9 +50,6 @@ import { KakaoAuthService } from '@/services/kakaoAuth'
 
 export default {
   name: 'LoginPage',
-  components: {
-    User
-  },
   data() {
     return {
       loading: {
@@ -103,7 +59,7 @@ export default {
       },
       isProcessing: false,
       // 실제 소셜 로그인 사용 여부 (개발/운영 환경 구분)
-      useRealSocialLogin: true, // Google 설정 완료 후 true로 변경
+      useRealSocialLogin: false, // 앱에서는 테스트 모드 사용
       googleAuth: new GoogleAuthService(),
       naverAuth: new NaverAuthService(),
       kakaoAuth: new KakaoAuthService()
@@ -286,31 +242,26 @@ export default {
     },
 
     continueAsGuest() {
-      ElMessageBox.confirm(
-        '게스트로 계속하면 일부 기능이 제한될 수 있습니다. 계속하시겠습니까?',
-        '게스트 모드',
-        {
-          confirmButtonText: '계속하기',
-          cancelButtonText: '취소',
-          type: 'info'
-        }
-      ).then(() => {
-        // 게스트 사용자 정보 생성
-        const guestUser = {
-          id: 'guest-' + Date.now(),
-          name: '게스트 사용자',
-          email: null,
-          provider: 'guest',
-          providerId: null,
-          isGuest: true
-        }
-        
-        authStore.login(guestUser)
-        ElMessage.success('게스트로 로그인되었습니다.')
-        this.$router.push('/')
-      }).catch(() => {
-        // 취소됨
-      })
+      // 기존 게스트 ID가 있으면 재사용, 없으면 새로 생성
+      let guestId = localStorage.getItem('guestUserId')
+      if (!guestId) {
+        guestId = 'guest-' + Date.now()
+        localStorage.setItem('guestUserId', guestId)
+      }
+      
+      // 게스트 사용자 정보 생성
+      const guestUser = {
+        id: guestId,
+        name: '게스트 사용자',
+        email: null,
+        provider: 'guest',
+        providerId: null,
+        isGuest: true
+      }
+      
+      authStore.login(guestUser)
+      ElMessage.success('환영합니다!')
+      this.$router.push('/')
     },
 
     // Java 서버에 로그인 성공 콜백 전송
@@ -354,13 +305,17 @@ export default {
 
 <style scoped>
 .login-page {
-  min-height: 100vh;
+  height: 100vh;
   background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow: hidden;
 }
 
@@ -451,18 +406,6 @@ export default {
   flex-direction: column;
   align-items: center;
   gap: 16px;
-}
-
-.guitar-icon {
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-  margin-bottom: 8px;
 }
 
 .login-header h1 {
@@ -618,11 +561,6 @@ export default {
   
   .login-header h1 {
     font-size: 28px;
-  }
-  
-  .guitar-icon {
-    width: 70px;
-    height: 70px;
   }
   
   .social-buttons .el-button {

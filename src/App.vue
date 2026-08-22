@@ -4,11 +4,6 @@
     <el-container>
       <el-header class="app-header">
         <div class="header-content">
-          <div class="logo">
-            <el-icon><Headset /></el-icon>
-            <h2>MRP - Music Rhythm Platform</h2>
-          </div>
-          
           <div class="nav-section" v-if="currentUser">
             <el-menu
               mode="horizontal"
@@ -17,43 +12,9 @@
               router
             >
               <el-menu-item index="/">홈</el-menu-item>
-              <el-menu-item index="/metronome">메트로놈 공유</el-menu-item>
-              <!-- 추후 적용 예정 -->
-              <!-- <el-menu-item index="/performance">연주영상</el-menu-item> -->
             </el-menu>
             
             <div class="user-section">
-              <el-dropdown @command="handleUserCommand">
-                <div class="user-info">
-                  <el-avatar 
-                    :src="currentUser.profileImageUrl" 
-                    :size="32"
-                    class="user-avatar"
-                  >
-                    <el-icon><User /></el-icon>
-                  </el-avatar>
-                  <span class="user-name">{{ currentUser.name }}</span>
-                  <el-icon class="dropdown-icon"><ArrowDown /></el-icon>
-                </div>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item command="profile">
-                      <el-icon><User /></el-icon>
-                      프로필
-                    </el-dropdown-item>
-                    <el-dropdown-item command="settings">
-                      <el-icon><Setting /></el-icon>
-                      설정
-                    </el-dropdown-item>
-                    <el-dropdown-item divided command="logout">
-                      <el-icon><SwitchButton /></el-icon>
-                      로그아웃
-                    </el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-              
-              <!-- 직접 로그아웃 버튼 -->
               <el-button 
                 type="danger" 
                 size="small" 
@@ -77,17 +38,13 @@
 
 <script>
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Headset, User, ArrowDown, Setting, SwitchButton } from '@element-plus/icons-vue'
+import { SwitchButton } from '@element-plus/icons-vue'
 import { authAPI } from '@/services/api'
 import { authStore } from '@/store/auth'
 
 export default {
   name: 'MrpApp',
   components: {
-    Headset,
-    User,
-    ArrowDown,
-    Setting,
     SwitchButton
   },
   data() {
@@ -184,8 +141,8 @@ export default {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   padding: 0;
-  height: 70px !important;
-  line-height: 70px;
+  height: 56px !important;
+  line-height: 56px;
 }
 
 .header-content {
@@ -201,24 +158,15 @@ export default {
 .nav-section {
   display: flex;
   align-items: center;
-  gap: 20px;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.logo h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .nav-menu {
   background: transparent !important;
   border: none !important;
+  justify-content: flex-start !important;
+  padding-left: 0 !important;
 }
 
 .nav-menu .el-menu-item {
@@ -234,39 +182,8 @@ export default {
 }
 
 .user-section {
-  margin-left: 20px;
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 20px;
-  transition: background-color 0.3s;
-}
-
-.user-info:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.user-avatar {
-  border: 2px solid rgba(255, 255, 255, 0.3);
-}
-
-.user-name {
-  color: white;
-  font-weight: 500;
-  font-size: 14px;
-}
-
-.dropdown-icon {
-  color: white;
-  font-size: 12px;
 }
 
 .logout-btn {
@@ -284,7 +201,7 @@ export default {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
-  min-height: calc(100vh - 70px);
+  min-height: calc(100vh - 56px);
 }
 
 /* 모바일 반응형 */

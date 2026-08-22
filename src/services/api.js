@@ -4,9 +4,13 @@ import axios from 'axios'
 const API_BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:8084/api'
 
 // 현재 사용 중인 API 주소 로그 출력
+console.log('='.repeat(60))
 console.log('🌐 현재 환경:', process.env.NODE_ENV)
 console.log('🔗 API 서버 주소:', API_BASE_URL)
 console.log('📝 환경변수 값:', process.env.VUE_APP_API_BASE_URL)
+console.log('🌍 User Agent:', navigator.userAgent)
+console.log('📱 Platform:', navigator.platform)
+console.log('='.repeat(60))
 
 const api = axios.create({
   baseURL: API_BASE_URL,

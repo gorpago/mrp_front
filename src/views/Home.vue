@@ -1,31 +1,12 @@
 <template>
   <div class="home">
-    <!-- 헤더 섹션 -->
-    <div class="hero-section">
-      <el-card class="hero-card" shadow="hover">
-        <div class="hero-content">
-          <el-icon class="hero-icon"><Headset /></el-icon>
-          <h1>Music Rhythm Platform</h1>
-          <p>밴드와 함께하는 실시간 메트로놈 공유 플랫폼</p>
-        </div>
-      </el-card>
-    </div>
-
     <!-- 메뉴 섹션 -->
     <div class="menu-section">
       <el-row :gutter="20">
         <el-col :xs="24" :sm="12" :md="12">
           <el-card class="menu-card" shadow="hover" @click="goToMetronome">
             <div class="menu-content">
-              <el-icon class="menu-icon"><Timer /></el-icon>
               <h3>메트로놈 공유</h3>
-              <p>실시간으로 밴드 멤버들과 메트로놈을 공유하세요</p>
-              <ul class="feature-list">
-                <li>실시간 BPM 동기화</li>
-                <li>세션 코드로 간편 참가</li>
-                <li>최대 10명까지 참여</li>
-                <li>다양한 박자 지원</li>
-              </ul>
               <el-button type="primary" size="large" class="menu-button">
                 시작하기
                 <el-icon class="el-icon--right"><ArrowRight /></el-icon>
@@ -144,39 +125,7 @@ export default {
 .home {
   max-width: 1200px;
   margin: 0 auto;
-}
-
-.hero-section {
-  margin-bottom: 40px;
-}
-
-.hero-card {
-  text-align: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-}
-
-.hero-content {
-  padding: 40px 20px;
-}
-
-.hero-icon {
-  font-size: 64px;
-  margin-bottom: 20px;
-  display: block;
-}
-
-.hero-content h1 {
-  font-size: 2.5rem;
-  margin-bottom: 15px;
-  font-weight: 700;
-}
-
-.hero-content p {
-  font-size: 1.2rem;
-  opacity: 0.9;
-  margin: 0;
+  padding-top: 20px;
 }
 
 .menu-section {
@@ -195,55 +144,20 @@ export default {
 
 .menu-content {
   text-align: center;
-  padding: 20px;
-  height: 100%;
+  padding: 30px 20px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-}
-
-.menu-icon {
-  font-size: 48px;
-  color: #667eea;
-  margin-bottom: 20px;
+  align-items: center;
+  gap: 16px;
 }
 
 .menu-content h3 {
   font-size: 1.5rem;
-  margin-bottom: 15px;
+  margin: 0;
   color: #2c3e50;
 }
 
-.menu-content p {
-  color: #666;
-  margin-bottom: 20px;
-  line-height: 1.6;
-}
-
-.feature-list {
-  list-style: none;
-  padding: 0;
-  margin: 20px 0;
-  text-align: left;
-}
-
-.feature-list li {
-  padding: 5px 0;
-  color: #666;
-  position: relative;
-  padding-left: 20px;
-}
-
-.feature-list li:before {
-  content: '✓';
-  color: #67c23a;
-  font-weight: bold;
-  position: absolute;
-  left: 0;
-}
-
 .menu-button {
-  margin-top: 20px;
   width: 100%;
 }
 

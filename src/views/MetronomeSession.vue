@@ -229,6 +229,9 @@ import { metronomeAPI } from '@/services/api'
 import { metronomeWebSocket } from '@/services/websocket'
 import { ElMessage } from 'element-plus'
 import { VideoPlay, Plus, Minus, Back, Delete, WarningFilled, Close } from '@element-plus/icons-vue'
+import NativeMetronome from '@/plugins/nativeMetronome'
+import { Capacitor } from '@capacitor/core'
+import { authStore } from '@/store/auth'
 
 export default {
   name: 'MetronomeSessionPage',
@@ -272,7 +275,11 @@ export default {
       wsConnected: false,
       // 서버 시간 동기화
       timeSyncInterval: null,
-      lastSyncTime: 0
+      lastSyncTime: 0,
+      // Wake Lock (화면 꺼짐 방지)
+      wakeLock: null,
+      // 네이티브 플러그인 사용 여부
+      useNativeMetronome: false
     }
   },
   computed: {
@@ -282,6 +289,20 @@ export default {
   },
   async mounted() {
     this.loadUserInfo()
+    
+    // 네이티브 플러그인 사용 가능 여부 확인
+    this.useNativeMetronome = Capacitor.isNativePlatform()
+    console.log('네이티브 메트로놈 사용:', this.useNativeMetronome)
+    
+    // 네이티브 메트로놈 비트 이벤트 리스너 등록
+    if (this.useNativeMetronome) {
+      NativeMetronome.addListener('beat', (data) => {
+        console.log('네이티브 비트:', data)
+        this.beatCount = data.beat
+        this.updateVisualBeat()
+      })
+    }
+    
     await this.syncServerTime()  // 서버 시간 동기화 먼저
     await this.loadSession()
     this.setupAudio()
@@ -321,17 +342,17 @@ export default {
     // 사용자 정보 로드
     loadUserInfo() {
       // authStore에서 사용자 정보 가져오기
-      const { authStore } = require('@/store/auth')
+      authStore.loadUser()
       
       if (authStore.isLoggedIn && authStore.currentUser) {
         this.currentUserId = authStore.currentUser.id
         console.log('로그인한 사용자 ID:', this.currentUserId)
       } else {
-        // 로그인하지 않은 경우 localStorage에서 임시 ID 가져오기
-        const tempUserId = localStorage.getItem('tempUserId') || 'user-' + Date.now()
-        localStorage.setItem('tempUserId', tempUserId)
-        this.currentUserId = tempUserId
-        console.log('임시 사용자 ID:', this.currentUserId)
+        // 로그인하지 않은 경우 localStorage에서 게스트 ID 가져오기
+        const guestUserId = localStorage.getItem('guestUserId') || 'guest-' + Date.now()
+        localStorage.setItem('guestUserId', guestUserId)
+        this.currentUserId = guestUserId
+        console.log('게스트 사용자 ID:', this.currentUserId)
       }
     },
     
@@ -383,6 +404,10 @@ export default {
       this.updating = true
       try {
         console.log('동기화된 메트로놈 시작 요청...')
+        
+        // 시작 직전 서버 시간 재동기화 (정확도 향상)
+        console.log('⏰ 시작 직전 서버 시간 재동기화...')
+        await this.syncServerTime()
         
         // AudioContext 활성화 (사용자 상호작용 필요)
         const audioReady = await this.ensureAudioContext()
@@ -511,9 +536,29 @@ export default {
     },
     
     // 동기화된 메트로놈 루프 시작 (서버 시간 동기화 적용 - 개선)
-    startSyncedMetronomeLoop() {
+    async startSyncedMetronomeLoop() {
       if (this.metronomeInterval) {
         clearInterval(this.metronomeInterval)
+      }
+      
+      // Wake Lock 활성화 (화면 꺼짐 방지)
+      this.requestWakeLock()
+      
+      // 네이티브 메트로놈 사용
+      if (this.useNativeMetronome) {
+        console.log('🎵 네이티브 메트로놈 시작')
+        try {
+          await NativeMetronome.start({
+            bpm: this.currentBpm,
+            timeSignature: this.currentTimeSignature,
+            syncStartTime: this.syncStartTime
+          })
+          console.log('✅ 네이티브 메트로놈 시작 완료')
+          return
+        } catch (error) {
+          console.error('네이티브 메트로놈 시작 실패, 웹 방식으로 전환:', error)
+          // 실패 시 웹 방식으로 폴백
+        }
       }
       
       if (!this.audioContext) {
@@ -839,17 +884,20 @@ export default {
     },
     
     stopMetronome() {
-      console.log('메트로놈 정지 시작')
+      console.log('메트로놈 정지')
       
       if (this.metronomeInterval) {
-        console.log('타이머 정리, ID:', this.metronomeInterval)
         clearInterval(this.metronomeInterval)
         this.metronomeInterval = null
       }
       
-      this.beatCount = 0
+      if (this.syncInterval) {
+        clearInterval(this.syncInterval)
+        this.syncInterval = null
+      }
+      
+      this.isPlaying = false
       this.isBeat = false
-      console.log('메트로놈 정지 완료')
     },
     
     playBeat() {
@@ -1007,7 +1055,11 @@ export default {
     },
     
     startPolling() {
-      // 5초마다 세션 상태 동기화
+      // Capacitor 앱에서는 2초, 웹에서는 5초마다 세션 상태 동기화
+      const isCapacitorApp = window.location.protocol === 'https:' && window.location.hostname === 'localhost'
+      const pollingInterval = isCapacitorApp ? 2000 : 5000
+      console.log(`Polling 간격: ${pollingInterval}ms (Capacitor: ${isCapacitorApp})`)
+      
       this.pollingInterval = setInterval(async () => {
         try {
           const response = await metronomeAPI.getSession(this.sessionId)
@@ -1117,7 +1169,7 @@ export default {
         } catch (error) {
           console.error('세션 동기화 실패:', error)
         }
-      }, 5000)
+      }, pollingInterval)
     },
     
     stopPolling() {
@@ -1346,6 +1398,37 @@ export default {
         console.log('주기적 시간 재동기화...')
         await this.syncServerTime()
       }, 30000) // 30초
+    },
+    
+    // Wake Lock 요청 (화면 꺼짐 방지)
+    async requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) {
+          this.wakeLock = await navigator.wakeLock.request('screen')
+          console.log('✅ Wake Lock 활성화 - 화면 꺼짐 방지')
+          
+          this.wakeLock.addEventListener('release', () => {
+            console.log('Wake Lock 해제됨')
+          })
+        } else {
+          console.warn('⚠️ Wake Lock API를 지원하지 않는 브라우저입니다')
+        }
+      } catch (error) {
+        console.error('Wake Lock 요청 실패:', error)
+      }
+    },
+    
+    // Wake Lock 해제
+    async releaseWakeLock() {
+      if (this.wakeLock) {
+        try {
+          await this.wakeLock.release()
+          this.wakeLock = null
+          console.log('Wake Lock 해제 완료')
+        } catch (error) {
+          console.error('Wake Lock 해제 실패:', error)
+        }
+      }
     }
   }
 }

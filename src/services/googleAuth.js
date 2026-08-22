@@ -1,10 +1,20 @@
+import { Browser } from '@capacitor/browser'
+
 // Google OAuth 설정 - 환경변수에서 자동으로 가져옴
 const GOOGLE_CLIENT_ID = process.env.VUE_APP_GOOGLE_CLIENT_ID || '326812627200-ddjmh5oa39477ukssgs5h536k08bvcd7.apps.googleusercontent.com'
+const REDIRECT_URI = 'https://musicplan-2df35.web.app/auth/callback' // Firebase 호스팅 URL
+
+// Capacitor 앱 환경 감지
+const isCapacitorApp = () => {
+  return window.location.protocol === 'capacitor:' || 
+         window.location.protocol === 'https:' && window.location.hostname === 'localhost'
+}
 
 // 현재 Google OAuth 설정 로그 출력
 console.log('🔑 Google Client ID:', GOOGLE_CLIENT_ID)
 console.log('🌐 현재 도메인:', window.location.origin)
 console.log('📝 환경:', process.env.NODE_ENV)
+console.log('📱 Capacitor 앱:', isCapacitorApp())
 
 export class GoogleAuthService {
   constructor() {
@@ -122,6 +132,32 @@ export class GoogleAuthService {
       }
     } catch (error) {
       console.error('사용자 정보 가져오기 실패:', error)
+      throw error
+    }
+  }
+
+  // Capacitor 앱용 Browser 플러그인 로그인
+  async signInWithBrowser() {
+    try {
+      console.log('📱 Capacitor 앱에서 Browser 플러그인으로 Google 로그인 시작')
+      
+      // OAuth URL 생성
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+        `client_id=${GOOGLE_CLIENT_ID}&` +
+        `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
+        `response_type=token&` +
+        `scope=openid%20profile%20email`
+      
+      console.log('🔗 OAuth URL:', authUrl)
+      
+      // Browser 플러그인으로 OAuth 페이지 열기
+      await Browser.open({ url: authUrl })
+      
+      // 현재는 게스트 로그인으로 대체 (OAuth 콜백 처리는 추가 구현 필요)
+      console.warn('⚠️ OAuth 콜백 처리가 구현되지 않았습니다. 게스트로 계속하기를 사용해주세요.')
+      throw new Error('현재 앱에서는 게스트 로그인만 지원됩니다. "게스트로 계속하기"를 사용해주세요.')
+    } catch (error) {
+      console.error('Browser 플러그인 로그인 실패:', error)
       throw error
     }
   }

@@ -1,35 +1,22 @@
 <template>
   <div class="metronome-share">
-    <div class="page-header">
-      <h1>메트로놈 공유</h1>
-      <p>실시간으로 밴드 멤버들과 메트로놈을 공유하세요</p>
-    </div>
-
     <!-- 액션 버튼 섹션 -->
     <div class="action-section">
       <el-row :gutter="20">
-        <el-col :xs="24" :sm="12">
-          <el-card class="action-card" shadow="hover">
+        <el-col :xs="24" :sm="12" :md="12">
+          <el-card class="action-card" shadow="hover" @click="showCreateDialog = true">
             <div class="action-content">
               <el-icon class="action-icon"><Plus /></el-icon>
-              <h3>새 세션 만들기</h3>
-              <p>새로운 메트로놈 세션을 생성하고 다른 멤버들을 초대하세요</p>
-              <el-button type="primary" size="large" @click="showCreateDialog = true">
-                세션 생성
-              </el-button>
+              <h3>세션 생성</h3>
             </div>
           </el-card>
         </el-col>
 
-        <el-col :xs="24" :sm="12">
-          <el-card class="action-card" shadow="hover">
+        <el-col :xs="24" :sm="12" :md="12">
+          <el-card class="action-card" shadow="hover" @click="showJoinDialog = true">
             <div class="action-content">
               <el-icon class="action-icon"><Connection /></el-icon>
-              <h3>세션 참가하기</h3>
-              <p>6자리 세션 코드를 입력하여 기존 세션에 참가하세요</p>
-              <el-button type="success" size="large" @click="showJoinDialog = true">
-                세션 참가
-              </el-button>
+              <h3>세션 참가</h3>
             </div>
           </el-card>
         </el-col>
@@ -104,6 +91,23 @@
 
             <div class="session-actions">
               <el-button 
+                v-if="isHost(session)"
+                type="primary" 
+                size="small" 
+                @click="goToSession(session.id)"
+              >
+                내 세션
+              </el-button>
+              <el-button 
+                v-else-if="isAlreadyParticipant(session)"
+                type="primary" 
+                size="small" 
+                @click="goToSession(session.id)"
+              >
+                입장
+              </el-button>
+              <el-button 
+                v-else
                 type="primary" 
                 size="small" 
                 @click="joinSession(session.sessionCode)"
@@ -138,13 +142,8 @@
         <el-form-item label="호스트 이름" required>
           <el-input 
             v-model="newSession.hostUserName" 
-            placeholder="로그인한 사용자 이름"
-            :readonly="authStore.isLoggedIn"
-            :disabled="authStore.isLoggedIn"
+            placeholder="호스트 이름을 입력하세요"
           />
-          <div v-if="authStore.isLoggedIn" style="font-size: 12px; color: #666; margin-top: 4px;">
-            로그인한 사용자: {{ authStore.currentUser?.name }}
-          </div>
         </el-form-item>
         
         <el-form-item label="BPM">
@@ -204,6 +203,15 @@
           />
         </el-form-item>
         
+        <el-form-item label="참여 아이디" required>
+          <el-input 
+            v-model="joinForm.userId" 
+            placeholder="세션에서 사용할 아이디"
+            maxlength="20"
+            show-word-limit
+          />
+        </el-form-item>
+        
         <el-form-item label="당신의 이름" required>
           <el-input v-model="joinForm.userName" placeholder="이름을 입력하세요" />
         </el-form-item>
@@ -248,7 +256,7 @@ export default {
       joinForm: {
         sessionCode: '',
         userName: '',
-        userId: 'user-' + Date.now() // 임시 사용자 ID
+        userId: '' // loadUserInfo에서 설정
       }
     }
   },
@@ -273,25 +281,56 @@ export default {
       // authStore에서 사용자 정보 로드
       authStore.loadUser()
       
+      // localStorage에 저장된 참여 아이디 우선 사용
+      const savedGuestId = localStorage.getItem('guestUserId')
+      
       if (authStore.isLoggedIn && authStore.currentUser) {
-        // 세션 생성 폼에 로그인한 사용자 정보 설정
-        this.newSession.hostUserName = authStore.currentUser.name || '익명 사용자'
-        this.newSession.hostUserId = authStore.currentUser.id || 'user-' + Date.now()
+        const userId = savedGuestId || authStore.currentUser.id || 'guest-' + Date.now()
+        const userName = authStore.currentUser.name || '익명 사용자'
         
-        // 참가 폼에도 사용자 정보 설정
-        this.joinForm.userName = authStore.currentUser.name || '익명 사용자'
-        this.joinForm.userId = authStore.currentUser.id || 'user-' + Date.now()
+        // 현재 사용자 ID를 localStorage와 동기화
+        authStore.currentUser.id = userId
+        authStore.updateUser(authStore.currentUser)
+        
+        // 세션 생성 폼에 설정
+        this.newSession.hostUserName = userName
+        this.newSession.hostUserId = userId
+        
+        // 참가 폼에도 설정
+        this.joinForm.userName = userName
+        this.joinForm.userId = userId
         
         console.log('로그인한 사용자 정보 로드됨:', authStore.currentUser)
       } else {
-        // 로그인하지 않은 경우 기본값 설정
-        const tempId = 'user-' + Date.now()
+        // 로그인하지 않은 경우
+        const tempId = savedGuestId || 'guest-' + Date.now()
+        localStorage.setItem('guestUserId', tempId)
         this.newSession.hostUserName = '익명 사용자'
         this.newSession.hostUserId = tempId
         this.joinForm.userName = '익명 사용자'
         this.joinForm.userId = tempId
-        
-        console.log('로그인하지 않은 사용자 - 임시 ID 사용:', tempId)
+        console.log('게스트 사용자 ID 사용:', tempId)
+      }
+    },
+    
+    // 참여 아이디/이름을 현재 사용자로 저장
+    saveParticipantId(userId, userName) {
+      localStorage.setItem('guestUserId', userId)
+      
+      if (authStore.isLoggedIn && authStore.currentUser) {
+        authStore.currentUser.id = userId
+        authStore.currentUser.name = userName
+        authStore.updateUser(authStore.currentUser)
+      } else {
+        const guestUser = {
+          id: userId,
+          name: userName,
+          email: null,
+          provider: 'guest',
+          providerId: null,
+          isGuest: true
+        }
+        authStore.login(guestUser)
       }
     },
     
@@ -357,24 +396,43 @@ export default {
     },
     
     async joinSessionByCode() {
-      if (!this.joinForm.sessionCode || !this.joinForm.userName) {
-        ElMessage.warning('세션 코드와 이름은 필수입니다')
+      const { sessionCode, userId, userName } = this.joinForm
+      
+      if (!sessionCode || !userName || !userId) {
+        ElMessage.warning('세션 코드, 아이디, 이름은 필수입니다')
         return
       }
       
+      // 참여 아이디/이름 저장
+      this.saveParticipantId(userId, userName)
+      
       this.joining = true
       try {
-        console.log('세션 참가 요청:', {
-          sessionCode: this.joinForm.sessionCode,
-          userId: this.joinForm.userId,
-          userName: this.joinForm.userName
-        })
+        // 활성 세션 목록에서 해당 세션 찾기
+        const targetSession = this.activeSessions.find(s => s.sessionCode === sessionCode)
         
-        const response = await metronomeAPI.joinSession(
-          this.joinForm.sessionCode,
-          this.joinForm.userId,
-          this.joinForm.userName
-        )
+        if (targetSession && (this.isHost(targetSession) || this.isAlreadyParticipant(targetSession))) {
+          ElMessage.warning('이미 참가 중이거나 내가 생성한 세션입니다. 세션으로 이동합니다.')
+          this.showJoinDialog = false
+          this.$router.push(`/metronome/session/${targetSession.id}`)
+          return
+        }
+        
+        // 이미 같은 아이디로 참가 중인 세션인지 확인
+        const userSessionsResponse = await metronomeAPI.getUserSessions(userId)
+        const userSessions = userSessionsResponse.data || []
+        const alreadyJoined = userSessions.find(s => s.sessionCode === sessionCode)
+        
+        if (alreadyJoined) {
+          ElMessage.warning('이미 참가 중인 세션입니다. 세션으로 이동합니다.')
+          this.showJoinDialog = false
+          this.$router.push(`/metronome/session/${alreadyJoined.id}`)
+          return
+        }
+        
+        console.log('세션 참가 요청:', { sessionCode, userId, userName })
+        
+        const response = await metronomeAPI.joinSession(sessionCode, userId, userName)
         
         if (response.data.success) {
           ElMessage.success('세션에 참가했습니다!')
@@ -387,7 +445,12 @@ export default {
         }
       } catch (error) {
         console.error('세션 참가 실패:', error)
-        ElMessage.error('세션 참가에 실패했습니다')
+        const message = error.response?.data?.message || error.message
+        if (message && (message.includes('이미 참가') || message.includes('already') || message.includes('duplicate') || message.includes('중복'))) {
+          ElMessage.error('이미 세션에 참가 중인 아이디입니다. 다른 아이디를 사용해주세요.')
+        } else {
+          ElMessage.error(message || '세션 참가에 실패했습니다')
+        }
       } finally {
         this.joining = false
       }
@@ -414,17 +477,16 @@ export default {
       }
     },
     
+    // 현재 사용자 ID 가져오기
+    getCurrentUserId() {
+      return this.joinForm.userId || 
+             (authStore.isLoggedIn && authStore.currentUser?.id) || 
+             localStorage.getItem('guestUserId')
+    },
+    
     // 호스트 권한 확인
     isHost(session) {
-      // 현재 로그인한 사용자 ID와 세션 호스트 ID 비교
-      let currentUserId = null
-      
-      if (authStore.isLoggedIn && authStore.currentUser) {
-        currentUserId = authStore.currentUser.id
-      } else {
-        // 로그인하지 않은 경우 현재 세션의 hostUserId 사용 (임시)
-        currentUserId = this.newSession.hostUserId
-      }
+      const currentUserId = this.getCurrentUserId()
       
       console.log('호스트 권한 확인:', {
         sessionHostUserId: session.hostUserId,
@@ -433,6 +495,22 @@ export default {
       })
       
       return session.hostUserId === currentUserId
+    },
+    
+    // 이미 참가자인지 확인
+    isAlreadyParticipant(session) {
+      const currentUserId = this.getCurrentUserId()
+      const participants = session.participants || []
+      
+      return participants.some(p => {
+        const pId = p.userId || p
+        return String(pId) === String(currentUserId)
+      })
+    },
+    
+    // 세션으로 이동
+    goToSession(sessionId) {
+      this.$router.push(`/metronome/session/${sessionId}`)
     },
     
     // 세션 삭제 확인 다이얼로그
@@ -492,70 +570,56 @@ export default {
 .metronome-share {
   max-width: 1200px;
   margin: 0 auto;
-}
-
-.page-header {
-  text-align: center;
-  margin-bottom: 40px;
-}
-
-.page-header h1 {
-  font-size: 2.5rem;
-  color: #2c3e50;
-  margin-bottom: 10px;
-}
-
-.page-header p {
-  font-size: 1.1rem;
-  color: #666;
+  padding-top: 20px;
 }
 
 .action-section {
-  margin-bottom: 50px;
+  margin-bottom: 20px;
 }
 
 .action-card {
   height: 100%;
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
 }
 
 .action-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-5px);
+  border-color: #667eea;
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
 }
 
 .action-content {
-  text-align: center;
-  padding: 30px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 16px;
 }
 
 .action-icon {
-  font-size: 48px;
+  font-size: 40px;
   color: #667eea;
-  margin-bottom: 20px;
+  flex-shrink: 0;
 }
 
 .action-content h3 {
-  font-size: 1.3rem;
-  margin-bottom: 15px;
+  font-size: 1.4rem;
+  margin: 0;
   color: #2c3e50;
-}
-
-.action-content p {
-  color: #666;
-  margin-bottom: 25px;
-  line-height: 1.6;
+  font-weight: 600;
 }
 
 .sessions-section {
-  margin-bottom: 40px;
+  margin-bottom: 20px;
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   gap: 10px;
 }
 
@@ -579,41 +643,47 @@ export default {
 }
 
 .session-card {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   height: 100%;
+}
+
+.session-card :deep(.el-card__body) {
+  padding: 12px 16px;
 }
 
 .session-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .session-header h4 {
   margin: 0;
   color: #2c3e50;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .session-info {
-  margin-bottom: 15px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
 }
 
 .info-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 6px;
   color: #666;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .session-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .session-code {
@@ -624,7 +694,7 @@ export default {
 
 .session-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   justify-content: center;
   align-items: center;
 }
